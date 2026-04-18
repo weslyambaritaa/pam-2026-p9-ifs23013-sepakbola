@@ -55,19 +55,15 @@ class _MotivationScreenState extends State<MotivationScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: Row(
-                children: [
-                  Text("⚽ "),
-                  Text("Generate Fakta Sepakbola"), // Ubah teks
-                ],
-              ),
+              // FIX 1: Gabungkan jadi satu Text agar tidak RenderFlex Overflow
+              title: const Text("⚽ Generate Fakta Sepakbola"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: themeController,
                     decoration: InputDecoration(
-                      labelText: "Klub / Pemain / Liga", // Ubah label
+                      labelText: "Klub / Pemain / Liga",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -97,11 +93,40 @@ class _MotivationScreenState extends State<MotivationScreen> {
                   onPressed: provider.isGenerating
                       ? null
                       : () async {
-                    await provider.generate(
-                      themeController.text,
-                      int.parse(totalController.text),
-                    );
-                    Navigator.pop(dialogContext);
+                    // FIX 2: Validasi input kosong sebelum dikirim ke API
+                    if (themeController.text.isEmpty ||
+                        totalController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Tema dan Total harus diisi!"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      final total = int.parse(totalController.text);
+
+                      await provider.generate(
+                        themeController.text,
+                        total,
+                      );
+
+                      // Tutup dialog kalau berhasil
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                    } catch (e) {
+                      // FIX 3: Tampilkan error dari backend (misal isi total > 10)
+                      if (dialogContext.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString().replaceAll("Exception: ", "")),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
                   },
                   child: provider.isGenerating
                       ? Row(
