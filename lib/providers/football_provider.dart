@@ -1,31 +1,28 @@
 import 'package:flutter/material.dart';
-import '../data/models/motivation_model.dart';
-import '../data/services/motivation_service.dart';
+import '../data/models/football_model.dart';
+import '../data/services/football_service.dart';
 
-class MotivationProvider extends ChangeNotifier {
-  List<Motivation> motivations = [];
+class FootballProvider extends ChangeNotifier {
+  List<Football> footballs = [];
   int page = 1;
   bool isLoading = false;
   bool hasMore = true;
-
-  // 🔥 NEW
   bool isGenerating = false;
 
-  Future<void> fetchMotivations() async {
+  Future<void> fetchFootballs() async {
     if (isLoading || !hasMore) return;
 
     isLoading = true;
     notifyListeners();
 
-    final result = await MotivationService.getMotivations(page);
-
+    final result = await FootballService.getFootballs(page);
     List data = result["data"];
 
     if (data.isEmpty) {
       hasMore = false;
     } else {
-      motivations.addAll(
-        data.map((e) => Motivation.fromJson(e)).toList(),
+      footballs.addAll(
+        data.map((e) => Football.fromJson(e)).toList(),
       );
       page++;
     }
@@ -34,18 +31,18 @@ class MotivationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> generate(String theme, int total) async {
+  Future<void> generate(String league, int total) async {
     isGenerating = true;
     notifyListeners();
 
     try {
-      await MotivationService.generateMotivation(theme, total);
+      await FootballService.generateFootballs(league, total);
 
-      motivations.clear();
+      footballs.clear();
       page = 1;
       hasMore = true;
 
-      await fetchMotivations();
+      await fetchFootballs();
     } finally {
       isGenerating = false;
       notifyListeners();
