@@ -1,4 +1,3 @@
-// lib/features/motivations/motivation_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -18,16 +17,13 @@ class _MotivationScreenState extends State<MotivationScreen> {
   void initState() {
     super.initState();
 
-    // Fix: Tunggu frame pertama selesai di-build sebelum memanggil provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<MotivationProvider>();
-      provider.fetchMotivations();
-    });
+    final provider = context.read<MotivationProvider>();
+    provider.fetchMotivations();
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
-        context.read<MotivationProvider>().fetchMotivations();
+        provider.fetchMotivations();
       }
     });
   }
@@ -47,7 +43,7 @@ class _MotivationScreenState extends State<MotivationScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // 🔥 biar gak bisa close saat loading
       builder: (dialogContext) {
         return Consumer<MotivationProvider>(
           builder: (context, provider, _) {
@@ -55,15 +51,19 @@ class _MotivationScreenState extends State<MotivationScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              // FIX 1: Gabungkan jadi satu Text agar tidak RenderFlex Overflow
-              title: const Text("⚽ Generate Fakta Sepakbola"),
+              title: Row(
+                children: [
+                  Text("✨ "),
+                  Text("Generate Motivasi"),
+                ],
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: themeController,
                     decoration: InputDecoration(
-                      labelText: "Klub / Pemain / Liga",
+                      labelText: "Theme",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -83,51 +83,26 @@ class _MotivationScreenState extends State<MotivationScreen> {
                 ],
               ),
               actions: [
+                // ❌ cancel hanya aktif kalau tidak loading
                 TextButton(
                   onPressed: provider.isGenerating
                       ? null
                       : () => Navigator.pop(dialogContext),
                   child: Text("Cancel"),
                 ),
+
                 ElevatedButton(
                   onPressed: provider.isGenerating
                       ? null
                       : () async {
-                    // FIX 2: Validasi input kosong sebelum dikirim ke API
-                    if (themeController.text.isEmpty ||
-                        totalController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Tema dan Total harus diisi!"),
-                        ),
-                      );
-                      return;
-                    }
-
-                    try {
-                      final total = int.parse(totalController.text);
-
-                      await provider.generate(
-                        themeController.text,
-                        total,
-                      );
-
-                      // Tutup dialog kalau berhasil
-                      if (dialogContext.mounted) {
-                        Navigator.pop(dialogContext);
-                      }
-                    } catch (e) {
-                      // FIX 3: Tampilkan error dari backend (misal isi total > 10)
-                      if (dialogContext.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(e.toString().replaceAll("Exception: ", "")),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
+                    await provider.generate(
+                      themeController.text,
+                      int.parse(totalController.text),
+                    );
+                    Navigator.pop(dialogContext);
                   },
+
+                  // 🔥 LOADING DI BUTTON
                   child: provider.isGenerating
                       ? Row(
                     mainAxisSize: MainAxisSize.min,
@@ -162,7 +137,7 @@ class _MotivationScreenState extends State<MotivationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Info Sepakbola", // Ubah title app bar
+          "Delcom Motivation",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: false,
@@ -173,13 +148,15 @@ class _MotivationScreenState extends State<MotivationScreen> {
           ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: showGenerateDialog,
-        icon: Icon(Icons.sports_soccer), // Ubah icon
+        icon: Icon(Icons.auto_awesome),
         label: Text("Generate"),
         backgroundColor: Color(0xFF6366F1),
         foregroundColor: Colors.white,
       ),
+
       body: Stack(
         children: [
           Padding(
@@ -194,7 +171,8 @@ class _MotivationScreenState extends State<MotivationScreen> {
                   final number = index + 1;
 
                   return Container(
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    margin:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     padding: EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
@@ -215,8 +193,11 @@ class _MotivationScreenState extends State<MotivationScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+
+                        // 🔥 HEADER
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
                               "#$number",
@@ -234,7 +215,9 @@ class _MotivationScreenState extends State<MotivationScreen> {
                             ),
                           ],
                         ),
+
                         SizedBox(height: 12),
+
                         Text(
                           item.text,
                           style: TextStyle(
@@ -263,6 +246,8 @@ class _MotivationScreenState extends State<MotivationScreen> {
               },
             ),
           ),
+
+          // 🔥 OVERLAY LOADING GENERATE
           if (provider.isGenerating)
             Container(
               color: Colors.black.withValues(alpha: 0.3),
